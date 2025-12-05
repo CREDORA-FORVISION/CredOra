@@ -1,0 +1,164 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+import joblib
+
+df = pd.read_csv("C:/Users/Rudresh Kumar Tiwari/Downloads/bank_transactions_data_2.csv")  # <-- change file name
+
+print("Columns:", df.columns.tolist())
+print(df.head())
+
+df["TransactionDate"] = pd.to_datetime(df["TransactionDate"], dayfirst=True, errors="coerce")
+
+df = df.dropna(subset=["TransactionDate"])
+
+df["TransactionAmount"] = pd.to_numeric(df["TransactionAmount"], errors="coerce")
+df["AccountBalance"] = pd.to_numeric(df["AccountBalance"], errors="coerce")
+
+df = df.dropna(subset=["TransactionAmount", "AccountBalance"])
+
+if "is_credit" not in df.columns or "is_debit" not in df.columns:
+     df["TransactionType"] = df["TransactionType"].astype(str).str.lower()
+     df["is_credit"] = df["TransactionType"].str.contains("credit").astype(int)
+     df["is_debit"] = df["TransactionType"].str.contains("debit").astype(int)
+
+debits = df[df["is_debit"] == 1].copy()
+
+debits["emi_candidate_count"] = (
+    debits.groupby(["AccountID", "TransactionAmount"])["TransactionID"].transform("count")
+)
+
+debits["is_emi"] = (debits["emi_candidate_count"] >= 3).astype(int)
+
+# Merge EMI flag back into main df
+df = df.merge(
+    debits[["TransactionID", "is_emi"]],
+    on="TransactionID",
+    how="left"
+)
+
+df["is_emi"] = df["is_emi"].fillna(0).astype(int)
+
+print("EMI transactions detected:", df["is_emi"].sum())
+
+# -----------------------------
+# 4. Create Month key
+# -----------------------------
+df["Month"] = df["TransactionDate"].dt.to_period("M")
+
+# -----------------------------
+# 5. Monthly aggregation: core financial features
+# -----------------------------
+def sum_if(mask_col):
+    # helper that returns a function to sum TransactionAmount where mask is 1
+    def _sum(series):
+        m = df.loc[series.index, mask_col] == 1
+        return series[m].sum()
+    return _sum
+
+monthly = df.groupby(["AccountID", "Month"]).agg(
+    income=("TransactionAmount", sum_if("is_credit")),
+    expense=("TransactionAmount", sum_if("is_debit")),
+    emi_amount=("TransactionAmount", sum_if("is_emi")),
+    num_emi_txns=("is_emi", "sum"),
+    num_transactions=("TransactionID", "count"),
+    avg_balance=("AccountBalance", "mean"),
+    min_balance=("AccountBalance", "min"),
+    customer_age=("CustomerAge", "mean"),
+    occupation=("CustomerOccupation", lambda x: x.mode()[0] if not x.mode().empty else "Unknown")
+).reset_index()
+
+# -----------------------------
+# 6. Derived ratios & FOIR
+# -----------------------------
+monthly["net_savings"] = monthly["income"] - monthly["expense"]
+
+# Avoid division by zero
+monthly["savings_rate"] = np.where(
+    monthly["income"] > 0,
+    monthly["net_savings"] / monthly["income"],
+    0
+)
+
+# FOIR = EMI / Income (Financial Obligation to Income Ratio)
+monthly["foir"] = np.where(
+    monthly["income"] > 0,
+    monthly["emi_amount"] / monthly["income"],
+    0
+)
+
+# Clean infinities / NaNs
+monthly.replace([np.inf, -np.inf], 0, inplace=True)
+monthly.fillna(0, inplace=True)
+
+
+def label_emi_stress(foir):
+    if foir < 0.2:
+        return 0  # low
+    elif foir < 0.4:
+        return 1  # medium
+    else:
+        return 2  # high
+
+monthly["emi_stress_label"] = monthly["foir"]
+
+print(monthly[["AccountID", "Month", "emi_amount", "income", "foir", "emi_stress_label"]].head(10))
+
+# -----------------------------
+# 8. Prepare features (X) and target (y)
+# -----------------------------
+feature_cols = [
+    "income",
+    "expense",
+    "net_savings",
+    "savings_rate",
+    "emi_amount",
+    "foir",
+    "avg_balance",
+    "min_balance",
+    "num_transactions",
+    "num_emi_txns",
+    "customer_age",
+]
+
+X = monthly[feature_cols]
+y = monthly["emi_stress_label"]
+
+# Optionally, encode occupation in future (OneHotEncoder) – skipping for now
+
+# -----------------------------
+# 9. Train/Test split & model training
+# -----------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.25, random_state=42, stratify=y
+)
+
+clf = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=None,
+    random_state=42,
+    class_weight="balanced"
+)
+
+clf.fit(X_train, y_train)
+
+# -----------------------------
+# 10. Evaluation
+# -----------------------------
+y_pred = clf.predict(X_test)
+print("\nClassification report (EMI Stress Levels 0=Low,1=Med,2=High):")
+print(classification_report(y_test, y_pred))
+
+print("\nConfusion matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+example_row = X.iloc[[0]]  # first row as example
+print(example_row)
+pred_class = clf.predict(example_row)[0]
+
+label_map = {0: "LOW", 1: "MEDIUM", 2: "HIGH"}
+print("\nExample prediction:")
+print("FOIR:", monthly.iloc[0]["foir"])
+print("Predicted EMI Stress:", label_map[pred_class])
