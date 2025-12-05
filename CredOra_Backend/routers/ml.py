@@ -1,25 +1,57 @@
-from fastapi import APIRouter, UploadFile, File, Depends, Header, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from ml.ml_engine import (
+    predict_emi_stress,
+    predict_stability,
+    predict_hidden_debt,
+    extract_features_from_csv
+)
 import pandas as pd
-from services.jwt_utils import decode_jwt
-from services.ml_engine import run_full_pipeline
+import io
 
-router = APIRouter(prefix="/ml", tags=["ml"])
+router = APIRouter(prefix="/ml", tags=["ML Models"])
 
-def get_user(token: str = Header(...)):
-    if not token.lower().startswith("bearer "):
-        raise HTTPException(status_code=401)
-    jwt_token = token.split(" ")[1]
-    return decode_jwt(jwt_token)
+# ------------------------------
+# 1) Predict from CSV Upload
+# ------------------------------
+@router.post("/predict-from-csv")
+async def predict_from_csv(file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+        df = pd.read_csv(io.BytesIO(content))
 
-@router.post("/full-analysis")
-async def full_analysis(
-    file: UploadFile = File(...),
-    emi_amount: float = 0,
-    customer_age: int = 25,
-    current_user=Depends(get_user)
-):
-    content = await file.read()
-    df = pd.read_csv(pd.io.common.StringIO(content.decode()))
+        features = extract_features_from_csv(df)
+        if features is None:
+            raise HTTPException(status_code=400, detail="CSV format not supported")
 
-    result = run_full_pipeline(df, emi_amount, customer_age)
-    return {"user": current_user, "result": result}
+        emi_result = predict_emi_stress(features)
+        stability_result = predict_stability(features)
+        hidden_result = predict_hidden_debt(features)
+
+        return {
+            "status": "success",
+            "emi_stress": emi_result,
+            "stability": stability_result,
+            "hidden_debt": hidden_result
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ------------------------------
+# 2) Predict from API JSON data
+# ------------------------------
+@router.post("/predict")
+def predict_all(features: dict):
+    try:
+        emi_result = predict_emi_stress(features)
+        stability_result = predict_stability(features)
+        hidden_result = predict_hidden_debt(features)
+
+        return {
+            "emi_stress": emi_result,
+            "stability": stability_result,
+            "hidden_debt": hidden_result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
