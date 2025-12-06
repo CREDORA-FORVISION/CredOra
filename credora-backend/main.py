@@ -1,19 +1,18 @@
-# main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from db import Base, engine
+from models_db import *  # noqa
 from routers import auth, ml, reports, banker
-from db import engine
-from models_db import Base
+
+# Create tables on startup
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CredOra Backend API")
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],   # for dev; for deploy, restrict to your frontend origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
