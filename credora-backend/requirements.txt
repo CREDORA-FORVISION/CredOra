@@ -1,17 +1,12 @@
 fastapi
-uvicorn[standard]
-httpx
-PyJWT
+uvicorn
 pydantic
-pandas
-numpy
-xgboost
-scikit-learn
-joblib
-<<<<<<< HEAD
-python-multipart
-=======
-python-multipart
->>>>>>> a66f6c0af2d3198076fc6b5b7c16d5a1f4e2dc84
 sqlalchemy
+python-multipart
+pandas
+scikit-learn
+numpy
+joblib
 passlib[bcrypt]
+pyjwt
+python-dotenv
