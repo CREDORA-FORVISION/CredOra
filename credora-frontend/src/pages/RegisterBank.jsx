@@ -1,98 +1,122 @@
-import React, { useState } from "react";
+// src/pages/RegisterBank.jsx
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/client";
 
 export default function RegisterBank() {
-  const [bankName, setBankName] = useState("");
-  const [adminEmail, setAdminEmail] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
-  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleRegister = async () => {
-    if (!bankName || !adminEmail || !adminPassword) {
-      setError("All fields are required.");
-      return;
-    }
+  const [form, setForm] = useState({
+    bank_name: "",
+    bank_code: "",
+    admin_email: "",
+    admin_password: "",
+  });
+
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/auth/register-bank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bank_name: bankName,
-          admin_email: adminEmail,
-          admin_password: adminPassword,
-        }),
-      });
+      const res = await api.post("/auth/register-bank", form);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.detail || "Bank registration failed");
-        return;
+      setMessage("Bank registered successfully. You can now create banker logins.");
+      // Optionally save bank_code for the admin
+      if (res.data.bank_code) {
+        localStorage.setItem("credora_bank_code", res.data.bank_code);
       }
-
-      alert("Bank Registered Successfully!");
-      navigate("/");
-    } catch (error) {
-      setError("Server error. Try again.");
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.detail || "Bank registration failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: "50px", color: "white" }}>
-      <h1>Register Your Bank</h1>
-
-      {error && (
-        <p style={{ color: "red", marginTop: "10px" }}>
-          {error}
+    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-slate-900 border border-slate-800 rounded-xl p-8 w-full max-w-lg"
+      >
+        <p className="text-xs text-emerald-400 mb-2">Bank Admin Onboarding</p>
+        <h1 className="text-2xl font-bold mb-2">Register Your Bank on CredOra</h1>
+        <p className="text-sm text-slate-400 mb-6">
+          Create a bank profile and issue secure banker access using a unique bank code.
         </p>
-      )}
 
-      <div style={{ marginTop: "20px" }}>
-        <label>Bank Name</label><br />
+        {error && (
+          <p className="text-xs text-red-400 bg-red-900/30 border border-red-900 px-3 py-2 rounded mb-3">
+            {error}
+          </p>
+        )}
+        {message && (
+          <p className="text-xs text-emerald-400 bg-emerald-900/30 border border-emerald-900 px-3 py-2 rounded mb-3">
+            {message}
+          </p>
+        )}
+
+        <label className="text-xs">Bank Name</label>
         <input
-          type="text"
-          value={bankName}
-          onChange={(e) => setBankName(e.target.value)}
-          style={{ padding: "8px", width: "300px" }}
+          name="bank_name"
+          value={form.bank_name}
+          onChange={handleChange}
+          className="w-full mb-3 px-3 py-2 bg-slate-800 rounded text-sm"
         />
-      </div>
 
-      <div style={{ marginTop: "20px" }}>
-        <label>Admin Email</label><br />
+        <label className="text-xs">Bank Code (unique)</label>
         <input
-          type="email"
-          value={adminEmail}
-          onChange={(e) => setAdminEmail(e.target.value)}
-          style={{ padding: "8px", width: "300px" }}
+          name="bank_code"
+          value={form.bank_code}
+          onChange={handleChange}
+          placeholder="e.g., CREDORA_KANPUR01"
+          className="w-full mb-4 px-3 py-2 bg-slate-800 rounded text-sm"
         />
-      </div>
 
-      <div style={{ marginTop: "20px" }}>
-        <label>Admin Password</label><br />
+        <label className="text-xs">Admin Email</label>
+        <input
+          name="admin_email"
+          value={form.admin_email}
+          onChange={handleChange}
+          className="w-full mb-3 px-3 py-2 bg-slate-800 rounded text-sm"
+        />
+
+        <label className="text-xs">Admin Password</label>
         <input
           type="password"
-          value={adminPassword}
-          onChange={(e) => setAdminPassword(e.target.value)}
-          style={{ padding: "8px", width: "300px" }}
+          name="admin_password"
+          value={form.admin_password}
+          onChange={handleChange}
+          className="w-full mb-5 px-3 py-2 bg-slate-800 rounded text-sm"
         />
-      </div>
 
-      <button
-        onClick={handleRegister}
-        style={{
-          marginTop: "20px",
-          padding: "10px 25px",
-          borderRadius: "8px",
-          background: "#685ee6",
-          color: "white",
-          border: "none",
-          cursor: "pointer",
-        }}
-      >
-        Register Bank
-      </button>
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-5 py-2 bg-emerald-500 text-slate-900 rounded-lg font-semibold text-sm disabled:opacity-60"
+          >
+            {loading ? "Registering..." : "Register Bank"}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="px-5 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm"
+          >
+            ← Back to Home
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
