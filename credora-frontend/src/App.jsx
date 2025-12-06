@@ -1,41 +1,38 @@
 import { Routes, Route } from "react-router-dom";
 
-import Home from "./pages/Home";
-import LoginPage from "./pages/LoginPage";
-import RegisterBank from "./pages/RegisterBank";
-import RegisterPage from "./pages/RegisterPage";
+import Home from "./pages/Home.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
+import RegisterBank from "./pages/RegisterBank.jsx";
 
 // USER PAGES
-import UserDashboard from "./pages/user/UserDashboard";
-import UserOverview from "./pages/user/UserOverview";
-import UserManualScenario from "./pages/user/ManualScenario";
-import UserPastReports from "./pages/user/PastReports";
-import UserUploadCSV from "./pages/user/UploadCSV";
+import UserDashboard from "./pages/user/UserDashboard.jsx";
+import UserOverview from "./pages/user/UserOverview.jsx";
+import UserManualScenario from "./pages/user/ManualScenario.jsx";
+import UserPastReports from "./pages/user/PastReports.jsx";
+import UserUploadCSV from "./pages/user/UploadCSV.jsx";
 
 // BANK PAGES
-import BankDashboard from "./pages/bank/BankDashboard";
-import BankCustomerPage from "./pages/bank/BankCustomerPage";
-import BankEvaluate from "./pages/bank/BankEvaluate";
-import SearchCustomers from "./pages/bank/SearchCustomers";
-import CurrentEvaluation from "./pages/bank/CurrentEvaluation";
-import ManualScenario from "./pages/bank/ManualScenario";
-import UploadCSV from "./pages/bank/UploadCSV";
-import PastReports from "./pages/bank/PastReports";
+import BankDashboard from "./pages/bank/BankDashboard.jsx";
+import BankCustomerPage from "./pages/bank/BankCustomerPage.jsx";
+import BankEvaluate from "./pages/bank/BankEvaluate.jsx";
+import SearchCustomers from "./pages/bank/SearchCustomers.jsx";
+import CurrentEvaluation from "./pages/bank/CurrentEvaluation.jsx";
+import ManualScenario from "./pages/bank/ManualScenario.jsx";
+import UploadCSV from "./pages/bank/UploadCSV.jsx";
+import PastReports from "./pages/bank/PastReports.jsx";
 
-import { ProtectedUser, ProtectedBanker } from "./components/ProtectedRoute";
+import { ProtectedUser, ProtectedBanker } from "./components/ProtectedRoute.jsx";
 
 export default function App() {
-  console.log("APP RENDERED");
   return (
     <Routes>
 
-      {/* Public */}
       <Route path="/" element={<Home />} />
       <Route path="/login/:role" element={<LoginPage />} />
       <Route path="/register/bank" element={<RegisterBank />} />
 
-      {/* User Protected Routes */}
-      <Route>
+      {/* USER ROUTES */}
+      <Route element={<ProtectedUser />}>
         <Route path="/user/dashboard" element={<UserDashboard />} />
         <Route path="/user/overview" element={<UserOverview />} />
         <Route path="/user/manual" element={<UserManualScenario />} />
@@ -43,7 +40,7 @@ export default function App() {
         <Route path="/user/upload" element={<UserUploadCSV />} />
       </Route>
 
-      {/* Banker Protected Routes */}
+      {/* BANK ROUTES */}
       <Route element={<ProtectedBanker />}>
         <Route path="/bank/dashboard" element={<BankDashboard />} />
         <Route path="/bank/customer" element={<BankCustomerPage />} />

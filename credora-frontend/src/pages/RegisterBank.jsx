@@ -1,126 +1,98 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/client";
-import NavBar from "../components/NavBar";
 
 export default function RegisterBank() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState({
-    bank_name: "",
-    bank_code: "",
-    admin_email: "",
-    admin_password: "",
-  });
-
+  const [bankName, setBankName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
+  const handleRegister = async () => {
+    if (!bankName || !adminEmail || !adminPassword) {
+      setError("All fields are required.");
+      return;
+    }
 
     try {
-      const res = await api.post("/auth/register-bank", form);
+      const res = await fetch("http://localhost:5000/auth/register-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bank_name: bankName,
+          admin_email: adminEmail,
+          admin_password: adminPassword,
+        }),
+      });
 
-      setMessage("Bank registered successfully. You can now create banker accounts.");
-      // Optional: auto-redirect to banker registration
-      setTimeout(() => navigate("/register/banker"), 1200);
-    } catch (err) {
-      setError(err.response?.data?.detail || "Bank registration failed.");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.detail || "Bank registration failed");
+        return;
+      }
+
+      alert("Bank Registered Successfully!");
+      navigate("/");
+    } catch (error) {
+      setError("Server error. Try again.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <NavBar />
+    <div style={{ padding: "50px", color: "white" }}>
+      <h1>Register Your Bank</h1>
 
-      <div className="flex items-center justify-center px-4 py-10">
-        <div className="w-full max-w-lg">
-          <div className="mb-6 text-left">
-            <p className="text-xs text-slate-400 uppercase tracking-wide">
-              Bank Admin Onboarding
-            </p>
-            <h1 className="text-2xl font-semibold mt-1">
-              Register Your Bank on CredOra
-            </h1>
-            <p className="text-slate-400 text-xs mt-2">
-              Create a unique bank profile and issue secure banker access using
-              a bank code.
-            </p>
-          </div>
+      {error && (
+        <p style={{ color: "red", marginTop: "10px" }}>
+          {error}
+        </p>
+      )}
 
-          <form
-            onSubmit={handleSubmit}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl"
-          >
-            {message && (
-              <p className="text-xs text-emerald-400 mb-3 bg-emerald-900/20 border border-emerald-700 px-3 py-2 rounded">
-                {message}
-              </p>
-            )}
-            {error && (
-              <p className="text-xs text-red-400 mb-3 bg-red-900/30 border border-red-900 px-3 py-2 rounded">
-                {error}
-              </p>
-            )}
-
-            <label className="block text-xs mb-1">Bank Name</label>
-            <input
-              name="bank_name"
-              onChange={handleChange}
-              className="w-full mb-3 px-3 py-2 rounded-lg bg-slate-800 text-sm border border-slate-700"
-            />
-
-            <label className="block text-xs mb-1">Bank Code (unique)</label>
-            <input
-              name="bank_code"
-              onChange={handleChange}
-              placeholder="e.g. CREDORA_KANPUR01"
-              className="w-full mb-4 px-3 py-2 rounded-lg bg-slate-800 text-sm border border-slate-700"
-            />
-
-            <p className="text-[11px] text-slate-400 mb-4">
-              This code will be used by your bankers when registering.
-            </p>
-
-            <label className="block text-xs mb-1">Admin Email</label>
-            <input
-              name="admin_email"
-              onChange={handleChange}
-              className="w-full mb-3 px-3 py-2 rounded-lg bg-slate-800 text-sm border border-slate-700"
-            />
-
-            <label className="block text-xs mb-1">Admin Password</label>
-            <input
-              type="password"
-              name="admin_password"
-              onChange={handleChange}
-              className="w-full mb-5 px-3 py-2 rounded-lg bg-slate-800 text-sm border border-slate-700"
-            />
-
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                className="px-5 py-2 rounded-lg bg-purple-500 text-black font-semibold hover:bg-purple-400"
-              >
-                Register Bank
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/")}
-                className="px-4 py-2 rounded-lg border border-slate-600 text-xs hover:bg-slate-900"
-              >
-                ← Back to Home
-              </button>
-            </div>
-          </form>
-        </div>
+      <div style={{ marginTop: "20px" }}>
+        <label>Bank Name</label><br />
+        <input
+          type="text"
+          value={bankName}
+          onChange={(e) => setBankName(e.target.value)}
+          style={{ padding: "8px", width: "300px" }}
+        />
       </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>Admin Email</label><br />
+        <input
+          type="email"
+          value={adminEmail}
+          onChange={(e) => setAdminEmail(e.target.value)}
+          style={{ padding: "8px", width: "300px" }}
+        />
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>Admin Password</label><br />
+        <input
+          type="password"
+          value={adminPassword}
+          onChange={(e) => setAdminPassword(e.target.value)}
+          style={{ padding: "8px", width: "300px" }}
+        />
+      </div>
+
+      <button
+        onClick={handleRegister}
+        style={{
+          marginTop: "20px",
+          padding: "10px 25px",
+          borderRadius: "8px",
+          background: "#685ee6",
+          color: "white",
+          border: "none",
+          cursor: "pointer",
+        }}
+      >
+        Register Bank
+      </button>
     </div>
   );
 }
