@@ -14,6 +14,24 @@ from datetime import datetime
 from db import Base
 
 
+# -----------------------------
+# BANK MODEL
+# -----------------------------
+class Bank(Base):
+    __tablename__ = "banks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    bank_code = Column(String(50), unique=True, index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # All banker users for this bank
+    bankers = relationship("User", back_populates="bank")
+
+
+# -----------------------------
+# USER MODEL
+# -----------------------------
 class User(Base):
     __tablename__ = "users"
 
@@ -24,9 +42,16 @@ class User(Base):
     role = Column(String(20), nullable=False, index=True)  # "user" or "banker"
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    # NEW: banker belongs to a bank (nullable for normal users)
+    bank_id = Column(Integer, ForeignKey("banks.id"), nullable=True, index=True)
+
     risk_reports = relationship("RiskReport", back_populates="user")
+    bank = relationship("Bank", back_populates="bankers")
 
 
+# -----------------------------
+# RISK REPORT MODEL
+# -----------------------------
 class RiskReport(Base):
     __tablename__ = "risk_reports"
 
