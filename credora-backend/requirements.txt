@@ -1,12 +1,13 @@
 fastapi
 uvicorn
-pydantic[email]
+pydantic
 sqlalchemy
 python-multipart
 pandas
-scikit-learn
-numpy
+scikit-learn==1.6.1
+numpy==1.26.4
 joblib
 passlib[bcrypt]
 pyjwt
 python-dotenv
+email-validator
