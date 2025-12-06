@@ -11,3 +11,5 @@ passlib[bcrypt]
 pyjwt
 python-dotenv
 email-validator
+scipy
+xgboost==1.7.6
